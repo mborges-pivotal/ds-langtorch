@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.1.4</version>
+		<relativePath/>
+		<!-- lookup parent from repository -->
+	</parent>
+	<groupId>com.datastax.da.vsearch</groupId>
+	<artifactId>langtorch</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>langtorch</name>
+	<description>Using Langtorch to build an Gen AI Agent</description>
+
+	<properties>
+		<!-- <java.version>21</java.version> -->
+		<datastax.astra.version>0.7.0</datastax.astra.version>
+		<datastax.astra.driver.version>4.17.0</datastax.astra.driver.version>
+		<langtorch.version>0.0.17</langtorch.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-cassandra</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>com.datastax.oss</groupId>
+					<artifactId>java-driver-core</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.datastax.oss</groupId>
+					<artifactId>java-driver-query-builder</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!-- DataStax Astra -->
+		<dependency>
+			<groupId>com.datastax.astra</groupId>
+			<artifactId>astra-spring-boot-3x-starter</artifactId>
+			<version>${datastax.astra.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>com.datastax.oss</groupId>
+					<artifactId>java-driver-core</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.datastax.oss</groupId>
+					<artifactId>java-driver-query-builder</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!-- DataStax drivers that support vector search - 4.16+ -->
+		<dependency>
+			<groupId>com.datastax.oss</groupId>
+			<artifactId>java-driver-core</artifactId>
+			<version>${datastax.astra.driver.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.datastax.oss</groupId>
+			<artifactId>java-driver-query-builder</artifactId>
+			<version>${datastax.astra.driver.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>ai.knowly</groupId>
+			<artifactId>langtorch</artifactId>
+			<version>${langtorch.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.jayway.jsonpath</groupId>
+			<artifactId>json-path</artifactId>
+			<version>2.8.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>
