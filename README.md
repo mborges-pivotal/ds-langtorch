@@ -31,7 +31,6 @@ TODO:
   * And directly using Astra JSON API or CQL
 * Bypass LangTorch and use OpenAI APIs directly
 
-
 ## Building
 ```
 ./mvnw compile package -DskipTests
@@ -44,3 +43,33 @@ First you need to make sure you have the right configuration in the .env file. S
 or
 java -jar target/langtorch-0.0.1-SNAPSHOT.jar
 ```
+
+## Using Gradio as the ChatBot interface
+We use [Gradio](https://www.gradio.app/) to build a simple chatbot UI to the SpringBoot api with just a few lines of code. 
+
+**Note:** There is a lot of error handling that is required to be done in the UI and improvements to the API. 
+
+![chatboot](./docs/chatbot.jpg)
+
+### Running
+It is recommended to create a python virtual environment using your tool of choice before installing the dependencies. The steps below are based on the virtual environment tool [venv](https://docs.python.org/3/library/venv.html). 
+
+```
+python -m venv .venv
+. ./.venv/bin/activate
+pip install gradio
+```
+
+Then simply run the chatbot python program:
+```
+python chatbot.py
+```
+
+Gradio will be listening on port **7860** by default. You need to make sure you have your SpringBoot application running. It will listen on port **8080** by default. 
+
+TODO:
+* the REST endpoint is currently hardcoded
+* no error handling
+* we are not looking at the returned choices from the API
+* we are not using history capability in the gradio [chatbot](https://www.gradio.app/guides/creating-a-chatbot-fast) component.
+

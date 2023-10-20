@@ -124,6 +124,7 @@ public class OpenAiAPIExample {
             e.printStackTrace();
         }
 
+        logger.info("Calling final interaction");
         return callChatCompletion(chatCompletionRequest);
     }
 
