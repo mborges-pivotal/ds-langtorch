@@ -12,7 +12,7 @@ def get_response(message, history):
     print (response)
     return response['choices'][1]['message']['content'];
 
-demo = gr.ChatInterface(get_response)
+demo = gr.ChatInterface(get_response, examples=["Where can I get a great burger?"], title="Austin Four Seasons Hotel ChatBot")
 demo.launch()
 
 # For quick test

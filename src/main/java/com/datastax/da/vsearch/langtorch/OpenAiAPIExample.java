@@ -5,10 +5,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
@@ -18,6 +20,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import com.datastax.oss.driver.api.core.cql.AsyncResultSet;
+import com.datastax.oss.driver.api.core.cql.Row;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.jayway.jsonpath.JsonPath;
@@ -44,7 +48,7 @@ public class OpenAiAPIExample {
 
     private RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${OPENAI_LLM_MODEL:text-similarity-babbage-001}")
+    @Value("${OPENAI_LLM_MODEL:text-embedding-ada-002}")
     private String llmModel;
 
     @Value("${OPENAI_CHAT_MODEL:gpt-3.5-turbo}")
@@ -52,6 +56,9 @@ public class OpenAiAPIExample {
 
     @Value("${WEATHER_API_KEY}")
     private String weatherApiKey;
+
+    @Autowired
+    private AstraDbVectorStore store;
 
     private OpenAIService service;
 
@@ -72,20 +79,53 @@ public class OpenAiAPIExample {
         return callCreateEmbedding(embeddingRequest);
     }
 
+    @GetMapping("/v1/search")
+    public @ResponseBody List<String> searchEmbedding(@RequestParam String message)
+            throws InterruptedException, ExecutionException {
+        EmbeddingRequest embeddingRequest = EmbeddingRequest.builder()
+                .model(llmModel)
+                .input(Collections.singletonList(message))
+                .build();
+
+        // Message embedding
+        CompletableFuture<List<Embedding>> result = callCreateEmbedding(embeddingRequest);
+        List<Double> embedding = result.get().get(0).getValue();
+
+        // Vector Search
+        CompletionStage<AsyncResultSet> rs = store.searchWebsite(embedding.toString());
+        rs.toCompletableFuture().join();
+
+        List<String> simSearchResults = new ArrayList<String>();
+        Row r = null;
+        while ((r = rs.toCompletableFuture().get().one()) != null) {
+            String rowString = r.getFormattedContents();
+            logger.debug(rowString);
+            simSearchResults.add(rowString);
+        }
+
+        return simSearchResults;
+    }
+
     @GetMapping("/v1/chat/completions")
-    public @ResponseBody CompletableFuture<ChatCompletionResult> createChatCompletion(@RequestParam String message) {
+    public @ResponseBody CompletableFuture<ChatCompletionResult> createChatCompletion(@RequestParam String message) throws InterruptedException, ExecutionException {
 
         List<ChatMessage> messages = new ArrayList<ChatMessage>();
         messages.add(SystemMessage.of("You are a very polite hotel concierge"));
         messages.add(SystemMessage.of("The hotel you work is in Austin, Texas "));
         messages.add(UserMessage.of(message));
 
+        // Similarity Search on the WebSite content to help results
+        List<String> simSearchResults = searchEmbedding(message);
+        for(String s: simSearchResults) {
+            messages.add(SystemMessage.of(s));
+        }
+
         // Build initial message
         ChatCompletionRequest chatCompletionRequest = ChatCompletionRequest.builder()
                 .setModel(chatModel)
                 .setMessages(messages)
                 .setN(3)
-                .setMaxTokens(50)
+                .setMaxTokens(250)
                 .setLogitBias(new HashMap<>())
                 .setFunctions(ImmutableList.of(buildWeatherFunction()))
                 .setFunctionCall("auto")
@@ -115,8 +155,9 @@ public class OpenAiAPIExample {
             String weather = getCurrentWeather(location);
 
             logger.info("Adding weather function response. Feels like {}", weather);
-            ChatMessage msg = new ChatMessage(weather, Role.ASSISTANT, functionName, functionCall);
-            messages.add(msg);
+            // ChatMessage msg = new ChatMessage(String.format("Weather in Austin, TX is %s fahrenheit",weather), Role.ASSISTANT, functionName, functionCall);
+
+            messages.add(2,SystemMessage.of(String.format("Weather in Austin, TX is %s fahrenheit",weather)));
 
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -125,7 +166,11 @@ public class OpenAiAPIExample {
         }
 
         logger.info("Calling final interaction");
-        return callChatCompletion(chatCompletionRequest);
+        CompletableFuture<ChatCompletionResult> response = callChatCompletion(chatCompletionRequest);
+
+        logger.debug("response: {}", response);
+
+        return response;
     }
 
     ///////////////////////////////////////////////////

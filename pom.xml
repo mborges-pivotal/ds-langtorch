@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.1.4</version>
+		<version>3.1.5</version>
 		<relativePath/>
 		<!-- lookup parent from repository -->
 	</parent>
@@ -72,12 +72,20 @@
 			<version>${datastax.astra.driver.version}</version>
 		</dependency>
 
+		<!-- DataStax drivers that support vector search - 4.16+ -->
 		<dependency>
 			<groupId>ai.knowly</groupId>
 			<artifactId>langtorch</artifactId>
 			<version>${langtorch.version}</version>
 		</dependency>
 
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<scope>annotationProcessor</scope>
+		</dependency>
+
+		<!-- JSON Parser Utility -->
 		<dependency>
 			<groupId>com.jayway.jsonpath</groupId>
 			<artifactId>json-path</artifactId>
@@ -104,6 +112,7 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
 	</dependencies>
 
 	<build>

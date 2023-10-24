@@ -24,11 +24,8 @@ And receive suggestion for activities in Austin based on the weather.
 
 TODO:
 * replace RestTemplate with WebClient
-* Create simple UI
 * Bring other models
-* Bring our vector search capabilities. 
-  * Possibly implementing in LangTorch 
-  * And directly using Astra JSON API or CQL
+* Bring our vector search capabilities into LangTorch
 * Bypass LangTorch and use OpenAI APIs directly
 
 ## Building
@@ -43,6 +40,18 @@ First you need to make sure you have the right configuration in the .env file. S
 or
 java -jar target/langtorch-0.0.1-SNAPSHOT.jar
 ```
+
+## Adding embedding to AstraDB
+We are using the LangChain [web scrapping](https://python.langchain.com/docs/use_cases/web_scraping) document loader to scrape the Four Seasons Austin website. Now this chatbot will use RAG to be able to answer questions specific to the hotel. 
+
+Before running the UI or using the SpringBoot API, you'll have to run the ETL tool to scrape the website and create the embedding.
+
+Simple run the program below under the **etl** folder:
+```
+python loadsite.py
+```
+
+This will create the table **vs_4seasons_openai** that is used to bring relevant information to our chat completion prompt.
 
 ## Using Gradio as the ChatBot interface
 We use [Gradio](https://www.gradio.app/) to build a simple chatbot UI to the SpringBoot api with just a few lines of code. 
