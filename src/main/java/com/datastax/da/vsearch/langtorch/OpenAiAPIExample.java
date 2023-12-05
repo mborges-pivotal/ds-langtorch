@@ -36,8 +36,8 @@ import ai.knowly.langtorch.llm.openai.schema.dto.completion.chat.FunctionCall;
 import ai.knowly.langtorch.llm.openai.schema.dto.completion.chat.Parameters;
 import ai.knowly.langtorch.llm.openai.schema.dto.embedding.Embedding;
 import ai.knowly.langtorch.llm.openai.schema.dto.embedding.EmbeddingRequest;
+import ai.knowly.langtorch.schema.chat.AssistantMessage;
 import ai.knowly.langtorch.schema.chat.ChatMessage;
-import ai.knowly.langtorch.schema.chat.Role;
 import ai.knowly.langtorch.schema.chat.SystemMessage;
 import ai.knowly.langtorch.schema.chat.UserMessage;
 
@@ -48,10 +48,11 @@ public class OpenAiAPIExample {
 
     private RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${OPENAI_LLM_MODEL:text-embedding-ada-002}")
+    @Value("${OPENAI_LLM_MODEL:text-embedding-ada-002}") // davinci-002
     private String llmModel;
 
-    @Value("${OPENAI_CHAT_MODEL:gpt-3.5-turbo}")
+    // gpt-4-1106-preview
+    @Value("${OPENAI_CHAT_MODEL:gpt-3.5-turbo-1106}")
     private String chatModel;
 
     @Value("${WEATHER_API_KEY}")
@@ -98,8 +99,9 @@ public class OpenAiAPIExample {
         List<String> simSearchResults = new ArrayList<String>();
         Row r = null;
         while ((r = rs.toCompletableFuture().get().one()) != null) {
-            String rowString = r.getFormattedContents();
-            logger.debug(rowString);
+            // String rowString = r.getFormattedContents();
+            String rowString = r.getString(0);
+            logger.debug("{} - {}", r.getFloat(1), rowString);
             simSearchResults.add(rowString);
         }
 
@@ -107,18 +109,32 @@ public class OpenAiAPIExample {
     }
 
     @GetMapping("/v1/chat/completions")
-    public @ResponseBody CompletableFuture<ChatCompletionResult> createChatCompletion(@RequestParam String message) throws InterruptedException, ExecutionException {
+    public @ResponseBody CompletableFuture<ChatCompletionResult> createChatCompletion(@RequestParam String message,
+            @RequestParam String[][] history)
+            throws InterruptedException, ExecutionException {
 
         List<ChatMessage> messages = new ArrayList<ChatMessage>();
         messages.add(SystemMessage.of("You are a very polite hotel concierge"));
         messages.add(SystemMessage.of("The hotel you work is in Austin, Texas "));
-        messages.add(UserMessage.of(message));
+
+        // Adding History
+        // if (history.length > 0) {
+        // logger.debug("Adding history {}",history.toString());
+        // for(int i=0; i<history.length;i++) {
+        // messages.add(UserMessage.of(history[i][0]));
+        // if (history[i].length >= 1) {
+        // messages.add(SystemMessage.of(history[i][0]));
+        // }
+        // }
+        // }
 
         // Similarity Search on the WebSite content to help results
         List<String> simSearchResults = searchEmbedding(message);
-        for(String s: simSearchResults) {
-            messages.add(SystemMessage.of(s));
+        for (String s : simSearchResults) {
+            messages.add(AssistantMessage.of(s));
         }
+
+        messages.add(UserMessage.of(message));
 
         // Build initial message
         ChatCompletionRequest chatCompletionRequest = ChatCompletionRequest.builder()
@@ -139,8 +155,12 @@ public class OpenAiAPIExample {
 
             // Don't need to call function
             if (!choice.getFinishReason().equals("function_call")) {
+                logger.debug(messages.toString());
                 return res;
             }
+
+            // remove user message
+            messages.clear();
 
             // Calling function
             FunctionCall functionCall = choice.getMessage().getFunctionCall();
@@ -155,9 +175,17 @@ public class OpenAiAPIExample {
             String weather = getCurrentWeather(location);
 
             logger.info("Adding weather function response. Feels like {}", weather);
-            // ChatMessage msg = new ChatMessage(String.format("Weather in Austin, TX is %s fahrenheit",weather), Role.ASSISTANT, functionName, functionCall);
+            // ChatMessage msg = new ChatMessage(String.format("Weather in Austin, TX is %s
+            // fahrenheit",weather), Role.ASSISTANT, functionName, functionCall);
 
-            messages.add(2,SystemMessage.of(String.format("Weather in Austin, TX is %s fahrenheit",weather)));
+            messages.add(SystemMessage.of("You are a very polite hotel concierge"));
+            messages.add(SystemMessage.of("The hotel you work is in Austin, Texas "));
+
+            messages.add(AssistantMessage.of(String.format("Weather in Austin, TX is %s fahrenheit", weather)));
+            // messages.add(AssistantMessage.of(
+            //         "Many people enjoy when the temperature is around 70-90 degrees Fahrenheit (21-32 degrees Celsius)"));
+            messages.add(AssistantMessage.of("Weather below 70 degrees Fahrenheit is not good to go to the lake"));
+            messages.add(UserMessage.of(message));
 
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -165,10 +193,21 @@ public class OpenAiAPIExample {
             e.printStackTrace();
         }
 
+        chatCompletionRequest = ChatCompletionRequest.builder()
+                .setModel(chatModel)
+                .setMessages(messages)
+                .setN(3)
+                .setMaxTokens(250)
+                .setLogitBias(new HashMap<>())
+                .setFunctions(ImmutableList.of(buildWeatherFunction()))
+                .setFunctionCall("auto")
+                .setLogitBias(new HashMap<>()).build();
+
         logger.info("Calling final interaction");
+        logger.debug(messages.toString());
         CompletableFuture<ChatCompletionResult> response = callChatCompletion(chatCompletionRequest);
 
-        logger.debug("response: {}", response);
+        logger.debug("response: {}", response.get());
 
         return response;
     }
